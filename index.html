@@ -3,88 +3,711 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CNC CAM-Assistenzsystem</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
+    <title>Shopfloor Schnittwertrechner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome für Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
-    <div id="app">
-        <header>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h1>CNC Assistenzsystem</h1>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
+                    <i class="fa-solid fa-microchip text-xl"></i>
+                </div>
                 <div>
-                    <button id="historyBtn" class="icon-btn" title="Berechnungsverlauf">⏱️ Verlauf</button>
-                    <button id="adminBtn" class="icon-btn" title="Datenbank verwalten">⚙️ Admin</button>
+                    <h1 class="text-xl font-bold tracking-tight text-white">Shopfloor Schnittwertrechner</h1>
+                    <p class="text-xs text-slate-400">Präzise Drehzahl- und Vorschubberechnung inkl. Werkzeug-Matrix</p>
                 </div>
             </div>
-            
-            <!-- Die neue 5-Schritt-Logik -->
-            <div class="stepper" id="stepper">
-                <div class="step-indicator" id="ind1">1. Maschine</div>
-                <div class="step-indicator" id="ind2">2. Material</div>
-                <div class="step-indicator" id="ind3">3. Werkzeug</div>
-                <div class="step-indicator" id="ind4">4. Parameter</div>
-                <div class="step-indicator" id="ind5">5. Ergebnis</div>
-            </div>
-        </header>
+            <nav class="flex bg-slate-900 p-1.5 rounded-xl border border-slate-700">
+                <button onclick="switchTab('wizard')" id="nav-wizard" class="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white shadow">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Wizard
+                </button>
+                <button onclick="switchTab('admin')" id="nav-admin" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-gears mr-2"></i>Admin-Verwaltung
+                </button>
+            </nav>
+        </div>
+    </header>
 
-        <main id="step-content">
-            <!-- Dynamischer Inhalt wird hier von app.js geladen -->
-        </main>
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
 
-        <footer class="controls">
-            <button id="prevBtn" disabled>Zurück</button>
-            <button id="nextBtn" disabled>Weiter</button>
-        </footer>
-    </div>
+        <!-- WIZARD TAB -->
+        <section id="tab-wizard" class="space-y-6">
+            <!-- Stepper Progress -->
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-sm">
+                <div class="grid grid-cols-4 gap-2 text-center text-xs font-semibold">
+                    <div id="step-ind-1" class="p-2 rounded-lg bg-blue-600 text-white">1. Werkzeug</div>
+                    <div id="step-ind-2" class="p-2 rounded-lg bg-slate-700 text-slate-400">2. Material & vc</div>
+                    <div id="step-ind-3" class="p-2 rounded-lg bg-slate-700 text-slate-400">3. Parameter</div>
+                    <div id="step-ind-4" class="p-2 rounded-lg bg-slate-700 text-slate-400">4. Ergebnis</div>
+                </div>
+            </div>
 
-    <!-- Verlauf & Favoriten Modal -->
-    <div id="historyModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Berechnungsverlauf</h2>
-                <button id="closeHistoryBtn" class="close-btn">✖</button>
+            <!-- Wizard Step Content -->
+            <div class="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-xl">
+                
+                <!-- SCHRITT 1: WERKZEUG -->
+                <div id="wizard-step-1" class="wizard-step space-y-6">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-screwdriver-wrench text-blue-500"></i> Schritt 1: Werkzeug auswählen
+                    </h2>
+                    <p class="text-sm text-slate-400">Wähle das passende Werkzeug für deine Bearbeitung aus:</p>
+                    
+                    <div id="wizard-tool-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Wird per JS befüllt -->
+                    </div>
+
+                    <div class="flex justify-end pt-4">
+                        <button onclick="wizardNext(2)" id="btn-next-1" disabled class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium rounded-xl transition shadow">
+                            Weiter <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SCHRITT 2: MATERIAL & VC -->
+                <div id="wizard-step-2" class="wizard-step space-y-6 hidden">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-blue-500"></i> Schritt 2: Material & Werkzeugspezifische Schnittgeschwindigkeit ($v_c$)
+                    </h2>
+                    <p class="text-sm text-slate-400">Wähle das Werkstückmaterial. Der hinterlegte $v_c$-Wert für dieses spezifische Werkzeug wird automatisch geladen:</p>
+                    
+                    <div id="wizard-material-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Wird per JS befüllt -->
+                    </div>
+
+                    <div class="flex justify-between pt-4">
+                        <button onclick="wizardPrev(1)" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-2"></i> Zurück
+                        </button>
+                        <button onclick="wizardNext(3)" id="btn-next-2" disabled class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium rounded-xl transition shadow">
+                            Weiter <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SCHRITT 3: PARAMETER -->
+                <div id="wizard-step-3" class="wizard-step space-y-6 hidden">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-blue-500"></i> Schritt 3: Schnittparameter anpassen
+                    </h2>
+                    <p class="text-sm text-slate-400">Passe bei Bedarf Vorschub pro Zahn ($f_z$), Zustellung ($a_p$, $a_e$) oder den $v_c$-Wert an:</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-slate-900/50 p-6 rounded-xl border border-slate-700/60">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Schnittgeschwindigkeit $v_c$ (m/min)</label>
+                            <input type="number" id="param-vc" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Vorschub pro Zahn $f_z$ (mm)</label>
+                            <input type="number" step="0.001" id="param-fz" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Zähnezahl $z$</label>
+                            <input type="number" id="param-z" readonly class="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-400 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Werkzeug-Durchmesser $D$ (mm)</label>
+                            <input type="number" id="param-d" readonly class="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-2.5 text-slate-400 cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Schnitttiefe $a_p$ (mm)</label>
+                            <input type="number" step="0.1" id="param-ap" value="5" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Schnittbreite $a_e$ (mm)</label>
+                            <input type="number" step="0.1" id="param-ae" value="10" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between pt-4">
+                        <button onclick="wizardPrev(2)" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-2"></i> Zurück
+                        </button>
+                        <button onclick="calculateAndGoToStep4()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition shadow flex items-center gap-2">
+                            <i class="fa-solid fa-calculator"></i> Schnittwerte berechnen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SCHRITT 4: ERGEBNIS -->
+                <div id="wizard-step-4" class="wizard-step space-y-6 hidden">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-square-poll-vertical text-emerald-500"></i> Schritt 4: Berechnungsergebnis
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl flex flex-col justify-between">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Drehzahl ($n$)</span>
+                            <div class="my-4">
+                                <span id="res-n" class="text-4xl font-extrabold text-blue-400">0</span>
+                                <span class="text-sm text-slate-400 ml-1">U/min</span>
+                            </div>
+                            <span class="text-xs text-slate-500">Berechnet aus $v_c$ und $D$</span>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl flex flex-col justify-between">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Vorschubgeschwindigkeit ($v_f$)</span>
+                            <div class="my-4">
+                                <span id="res-vf" class="text-4xl font-extrabold text-emerald-400">0</span>
+                                <span class="text-sm text-slate-400 ml-1">mm/min</span>
+                            </div>
+                            <span class="text-xs text-slate-500">Vorschub pro Minute</span>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl flex flex-col justify-between">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Zeitspanvolumen ($Q$)</span>
+                            <div class="my-4">
+                                <span id="res-q" class="text-4xl font-extrabold text-purple-400">0</span>
+                                <span class="text-sm text-slate-400 ml-1">cm³/min</span>
+                            </div>
+                            <span class="text-xs text-slate-500">Materialabtrag pro Zeit</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-300">
+                        <div>
+                            <span class="font-semibold text-white">Gewähltes Werkzeug:</span> <span id="summary-tool" class="text-blue-400">-</span> | 
+                            <span class="font-semibold text-white">Material:</span> <span id="summary-mat" class="text-emerald-400">-</span>
+                        </div>
+                        <button onclick="resetWizard()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition text-xs font-medium border border-slate-700">
+                            <i class="fa-solid fa-rotate-right mr-1.5"></i> Neue Berechnung
+                        </button>
+                    </div>
+
+                    <div class="flex justify-start pt-4">
+                        <button onclick="wizardPrev(3)" class="px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-2"></i> Zurück zu den Parametern
+                        </button>
+                    </div>
+                </div>
+
             </div>
-            <div id="history-list">
-                <!-- Verlaufseinträge werden hier generiert -->
+        </section>
+
+        <!-- ADMIN TAB -->
+        <section id="tab-admin" class="space-y-8 hidden">
+            <!-- Sub-Navigation Admin -->
+            <div class="flex gap-4 border-b border-slate-700 pb-4">
+                <button onclick="switchAdminTab('tools')" id="admin-nav-tools" class="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium text-sm transition">Werkzeuge & $v_c$-Matrix</button>
+                <button onclick="switchAdminTab('materials')" id="admin-nav-materials" class="px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-xl font-medium text-sm transition">Materialien verwalten</button>
             </div>
+
+            <!-- ADMIN: WERKZEUGE -->
+            <div id="admin-section-tools" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-toolbox text-blue-500"></i> Werkzeug-Verwaltung & Werkstoff-$v_c$
+                    </h2>
+                    <button onclick="openToolModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-xl transition shadow flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Neues Werkzeug
+                    </button>
+                </div>
+
+                <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 uppercase text-xs">
+                                    <th class="p-4">Name</th>
+                                    <th class="p-4">Typ</th>
+                                    <th class="p-4">Ø (mm)</th>
+                                    <th class="p-4">Zähne (z)</th>
+                                    <th class="p-4">Std.-Vorschub ($f_z$)</th>
+                                    <th class="p-4">$v_c$-Werte pro Material</th>
+                                    <th class="p-4 text-right">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-tools-table" class="divide-y divide-slate-700">
+                                <!-- Wird per JS befüllt -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMIN: MATERIALIEN -->
+            <div id="admin-section-materials" class="space-y-6 hidden">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-blue-500"></i> Material-Verwaltung
+                    </h2>
+                    <button onclick="openMaterialModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-xl transition shadow flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Neues Material
+                    </button>
+                </div>
+
+                <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-900/60 border-b border-slate-700 text-slate-400 uppercase text-xs">
+                                    <th class="p-4">Material-Bezeichnung</th>
+                                    <th class="p-4">Standard-$v_c$ (Fallback)</th>
+                                    <th class="p-4 text-right">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-materials-table" class="divide-y divide-slate-700">
+                                <!-- Wird per JS befüllt -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: WERKZEUG BEARBEITEN / ERSTELLEN -->
+    <div id="tool-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 id="tool-modal-title" class="text-lg font-bold text-white">Werkzeug hinzufügen</h3>
+            <form id="tool-form" onsubmit="saveTool(event)" class="space-y-4">
+                <input type="hidden" id="tool-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Werkzeugname</label>
+                        <input type="text" id="tool-name" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Typ</label>
+                        <select id="tool-type" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                            <option value="Fräser">Fräser</option>
+                            <option value="Bohrer">Bohrer</option>
+                            <option value="Reibahle">Reibahle</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Durchmesser $D$ (mm)</label>
+                        <input type="number" step="0.1" id="tool-d" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Zähnezahl ($z$)</label>
+                        <input type="number" id="tool-z" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Vorschub pro Zahn ($f_z$ in mm)</label>
+                        <input type="number" step="0.001" id="tool-fz" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Werkzeugspezifische vc Werte pro Material -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Werkzeugspezifische $v_c$-Werte pro Material (m/min)</label>
+                    <div id="tool-vc-matrix-inputs" class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/60 p-4 rounded-xl border border-slate-700">
+                        <!-- Wird per JS befüllt -->
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
+                    <button type="button" onclick="closeToolModal()" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition">Abbrechen</button>
+                    <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition shadow">Speichern</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Admin Modal -->
-    <div id="adminModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Admin-Konsole</h2>
-                <button id="closeAdminBtn" class="close-btn">✖</button>
-            </div>
-            <div class="admin-tabs" id="adminTabsContainer">
-                <button class="tab-btn active" data-tab="machTab">Maschinen</button>
-                <button class="tab-btn" data-tab="matTab">Werkstoffe</button>
-                <button class="tab-btn" data-tab="catTab">Kategorien</button>
-                <button class="tab-btn" data-tab="toolTab">Werkzeuge</button>
-                <button class="tab-btn" data-tab="profTab">Profile</button>
-                <button class="tab-btn" data-tab="backupTab">💾 Backup</button>
-            </div>
-            
-            <div id="admin-form-container">
-                <!-- Dynamisches Formular für neuen Eintrag -->
-            </div>
-            <hr id="admin-hr">
-            <h3 id="admin-list-title">Vorhandene Einträge</h3>
-            <div id="admin-list">
-                <!-- Liste der Datenbank-Einträge -->
-            </div>
-            <div style="margin-top: 20px; text-align: right;">
-                <button id="factoryResetBtn" style="background: #e74c3c;">Auf Standard zurücksetzen</button>
-            </div>
+    <!-- MODAL: MATERIAL BEARBEITEN / ERSTELLEN -->
+    <div id="material-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+            <h3 id="material-modal-title" class="text-lg font-bold text-white">Material hinzufügen</h3>
+            <form id="material-form" onsubmit="saveMaterial(event)" class="space-y-4">
+                <input type="hidden" id="material-id">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Bezeichnung</label>
+                    <input type="text" id="material-name" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Standard-$v_c$ Fallback (m/min)</label>
+                    <input type="number" id="material-vc" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
+                    <button type="button" onclick="closeMaterialModal()" class="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition">Abbrechen</button>
+                    <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition shadow">Speichern</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Versteckter Datei-Input für Backups -->
-    <input type="file" id="importFile" style="display:none" accept=".json">
+    <!-- JavaScript Logik -->
+    <script>
+        // Initiale Standarddaten falls LocalStorage leer ist
+        const defaultMaterials = [
+            { id: 1, name: "Aluminium (AlMgSi)", defaultVc: 350 },
+            { id: 2, name: "Baustahl (1.1730)", defaultVc: 200 },
+            { id: 3, name: "CrNi-Stahl (1.4301)", defaultVc: 120 }
+        ];
 
-    <!-- WICHTIG: Das 'type="module"' Attribut lädt Ihre neue Architektur -->
-    <script type="module" src="app.js"></script>
+        const defaultTools = [
+            { 
+                id: 1, 
+                name: "VHM Schruppfräser", 
+                type: "Fräser", 
+                diameter: 12, 
+                z: 4, 
+                fz: 0.08,
+                vcValues: { 1: 400, 2: 180, 3: 100 } 
+            },
+            { 
+                id: 2, 
+                name: "VHM Schlichtfräser", 
+                type: "Fräser", 
+                diameter: 10, 
+                z: 3, 
+                fz: 0.05,
+                vcValues: { 1: 350, 2: 220, 3: 130 } 
+            }
+        ];
+
+        let materials = JSON.parse(localStorage.getItem('shopfloor_materials')) || defaultMaterials;
+        let tools = JSON.parse(localStorage.getItem('shopfloor_tools')) || defaultTools;
+
+        // Zustand des Wizards
+        let selectedToolId = null;
+        let selectedMaterialId = null;
+        let currentWizardStep = 1;
+
+        function saveData() {
+            localStorage.setItem('shopfloor_materials', JSON.stringify(materials));
+            localStorage.setItem('shopfloor_tools', JSON.stringify(tools));
+        }
+
+        // Tab Switching
+        function switchTab(tab) {
+            document.getElementById('tab-wizard').classList.toggle('hidden', tab !== 'wizard');
+            document.getElementById('tab-admin').classList.toggle('hidden', tab !== 'admin');
+            
+            document.getElementById('nav-wizard').className = tab === 'wizard' ? 'px-4 py-2 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white shadow' : 'px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white';
+            document.getElementById('nav-admin').className = tab === 'admin' ? 'px-4 py-2 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white shadow' : 'px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white';
+
+            if (tab === 'wizard') initWizardStep1();
+            if (tab === 'admin') renderAdminTools();
+        }
+
+        function switchAdminTab(sub) {
+            document.getElementById('admin-section-tools').classList.toggle('hidden', sub !== 'tools');
+            document.getElementById('admin-section-materials').classList.toggle('hidden', sub !== 'materials');
+
+            document.getElementById('admin-nav-tools').className = sub === 'tools' ? 'px-4 py-2 bg-blue-600 text-white rounded-xl font-medium text-sm transition' : 'px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-xl font-medium text-sm transition';
+            document.getElementById('admin-nav-materials').className = sub === 'materials' ? 'px-4 py-2 bg-blue-600 text-white rounded-xl font-medium text-sm transition' : 'px-4 py-2 bg-slate-800 text-slate-400 hover:text-white rounded-xl font-medium text-sm transition';
+
+            if (sub === 'tools') renderAdminTools();
+            if (sub === 'materials') renderAdminMaterials();
+        }
+
+        // --- WIZARD LOGIK ---
+        function updateStepperUI(step) {
+            currentWizardStep = step;
+            for (let i = 1; i <= 4; i++) {
+                const el = document.getElementById(`step-ind-${i}`);
+                const sec = document.getElementById(`wizard-step-${i}`);
+                sec.classList.toggle('hidden', i !== step);
+                
+                if (i < step) {
+                    el.className = "p-2 rounded-lg bg-emerald-600 text-white";
+                } else if (i === step) {
+                    el.className = "p-2 rounded-lg bg-blue-600 text-white";
+                } else {
+                    el.className = "p-2 rounded-lg bg-slate-700 text-slate-400";
+                }
+            }
+        }
+
+        function initWizardStep1() {
+            updateStepperUI(1);
+            const container = document.getElementById('wizard-tool-list');
+            container.innerHTML = tools.length === 0 ? '<p class="text-sm text-slate-400 col-span-3">Keine Werkzeuge angelegt. Bitte im Admin-Bereich hinzufügen.</p>' : '';
+
+            tools.forEach(tool => {
+                const isSelected = selectedToolId === tool.id;
+                container.innerHTML += `
+                    <div onclick="selectTool(${tool.id})" class="p-5 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-blue-600/20 border-blue-500 shadow-md' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded bg-slate-800 text-blue-400">${tool.type}</span>
+                            <span class="text-sm font-bold text-white">Ø ${tool.diameter} mm</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white mb-1">${tool.name}</h3>
+                        <p class="text-xs text-slate-400">Zähnezahl: ${tool.z} | Vorschub: ${tool.fz} mm/Z</p>
+                    </div>
+                `;
+            });
+            document.getElementById('btn-next-1').disabled = selectedToolId === null;
+        }
+
+        function selectTool(id) {
+            selectedToolId = id;
+            initWizardStep1();
+        }
+
+        function wizardNext(step) {
+            if (step === 2) {
+                if (!selectedToolId) return;
+                initWizardStep2();
+            } else if (step === 3) {
+                if (!selectedMaterialId) return;
+                initWizardStep3();
+            }
+            updateStepperUI(step);
+        }
+
+        function wizardPrev(step) {
+            updateStepperUI(step);
+            if (step === 1) initWizardStep1();
+            if (step === 2) initWizardStep2();
+            if (step === 3) initWizardStep3();
+        }
+
+        function initWizardStep2() {
+            const tool = tools.find(t => t.id === selectedToolId);
+            const container = document.getElementById('wizard-material-list');
+            container.innerHTML = '';
+
+            materials.forEach(mat => {
+                const isSelected = selectedMaterialId === mat.id;
+                // Werkzeugspezifischer vc, fallback auf Material-Default oder 200
+                const vcVal = (tool.vcValues && tool.vcValues[mat.id] !== undefined) ? tool.vcValues[mat.id] : mat.defaultVc;
+                
+                container.innerHTML += `
+                    <div onclick="selectMaterial(${mat.id})" class="p-5 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-blue-600/20 border-blue-500 shadow-md' : 'bg-slate-900 border-slate-700 hover:border-slate-500'}">
+                        <h3 class="text-base font-bold text-white mb-2">${mat.name}</h3>
+                        <div class="text-xs text-blue-400 font-semibold bg-slate-800/80 px-3 py-1.5 rounded-lg inline-block">
+                            $v_c$: ${vcVal} m/min <span class="text-slate-400 font-normal">(spezifisch)</span>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('btn-next-2').disabled = selectedMaterialId === null;
+        }
+
+        function selectMaterial(id) {
+            selectedMaterialId = id;
+            initWizardStep2();
+        }
+
+        function initWizardStep3() {
+            const tool = tools.find(t => t.id === selectedToolId);
+            const mat = materials.find(m => m.id === selectedMaterialId);
+            
+            // Hole werkzeugspezifischen vc Wert
+            const vcVal = (tool.vcValues && tool.vcValues[mat.id] !== undefined) ? tool.vcValues[mat.id] : mat.defaultVc;
+
+            document.getElementById('param-vc').value = vcVal;
+            document.getElementById('param-fz').value = tool.fz;
+            document.getElementById('param-z').value = tool.z;
+            document.getElementById('param-d').value = tool.diameter;
+        }
+
+        function calculateAndGoToStep4() {
+            const vc = parseFloat(document.getElementById('param-vc').value);
+            const fz = parseFloat(document.getElementById('param-fz').value);
+            const z = parseInt(document.getElementById('param-z').value);
+            const D = parseFloat(document.getElementById('param-d').value);
+            const ap = parseFloat(document.getElementById('param-ap').value);
+            const ae = parseFloat(document.getElementById('param-ae').value);
+
+            // Formeln
+            // Drehzahl n = (vc * 1000) / (PI * D)
+            const n = (vc * 1000) / (Math.PI * D);
+            // Vorschubgeschwindigkeit vf = n * z * fz
+            const vf = n * z * fz;
+            // Zeitspanvolumen Q = (ap * ae * vf) / 1000
+            const q = (ap * ae * vf) / 1000;
+
+            document.getElementById('res-n').innerText = Math.round(n);
+            document.getElementById('res-vf').innerText = Math.round(vf);
+            document.getElementById('res-q').innerText = q.toFixed(1);
+
+            const tool = tools.find(t => t.id === selectedToolId);
+            const mat = materials.find(m => m.id === selectedMaterialId);
+            document.getElementById('summary-tool').innerText = tool.name;
+            document.getElementById('summary-mat').innerText = mat.name;
+
+            updateStepperUI(4);
+        }
+
+        function resetWizard() {
+            selectedToolId = null;
+            selectedMaterialId = null;
+            initWizardStep1();
+        }
+
+        // --- ADMIN WERKZEUGE ---
+        function renderAdminTools() {
+            const tbody = document.getElementById('admin-tools-table');
+            tbody.innerHTML = tools.length === 0 ? '<tr><td colspan="7" class="p-4 text-center text-slate-400">Keine Werkzeuge vorhanden.</td></tr>' : '';
+
+            tools.forEach(tool => {
+                // Generiere vc Badges für die Übersicht
+                let vcSummary = '<div class="flex flex-wrap gap-1">';
+                materials.forEach(mat => {
+                    const val = (tool.vcValues && tool.vcValues[mat.id] !== undefined) ? tool.vcValues[mat.id] : mat.defaultVc;
+                    vcSummary += `<span class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-xs text-slate-300"><b>${mat.name.split(' ')[0]}:</b> ${val}</span>`;
+                });
+                vcSummary += '</div>';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-900/40 transition">
+                        <td class="p-4 font-semibold text-white">${tool.name}</td>
+                        <td class="p-4 text-slate-300">${tool.type}</td>
+                        <td class="p-4 text-slate-300">${tool.diameter}</td>
+                        <td class="p-4 text-slate-300">${tool.z}</td>
+                        <td class="p-4 text-slate-300">${tool.fz} mm</td>
+                        <td class="p-4">${vcSummary}</td>
+                        <td class="p-4 text-right space-x-2">
+                            <button onclick="openToolModal(${tool.id})" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition text-xs font-medium"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteTool(${tool.id})" class="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition text-xs font-medium"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openToolModal(id = null) {
+            document.getElementById('tool-modal').classList.remove('hidden');
+            document.getElementById('tool-modal').classList.add('flex');
+            
+            // Generiere dynamische vc Eingabefelder für jedes Material im Modal
+            const matrixContainer = document.getElementById('tool-vc-matrix-inputs');
+            matrixContainer.innerHTML = '';
+            
+            let tool = id ? tools.find(t => t.id === id) : null;
+            
+            document.getElementById('tool-modal-title').innerText = id ? 'Werkzeug bearbeiten & $v_c$-Werte' : 'Neues Werkzeug anlegen';
+            document.getElementById('tool-id').value = tool ? tool.id : '';
+            document.getElementById('tool-name').value = tool ? tool.name : '';
+            document.getElementById('tool-type').value = tool ? tool.type : 'Fräser';
+            document.getElementById('tool-d').value = tool ? tool.diameter : '';
+            document.getElementById('tool-z').value = tool ? tool.z : '';
+            document.getElementById('tool-fz').value = tool ? tool.fz : '';
+
+            materials.forEach(mat => {
+                const currentVc = tool && tool.vcValues && tool.vcValues[mat.id] !== undefined ? tool.vcValues[mat.id] : mat.defaultVc;
+                matrixContainer.innerHTML += `
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">${mat.name} ($v_c$):</label>
+                        <input type="number" id="vc-mat-${mat.id}" value="${currentVc}" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                `;
+            });
+        }
+
+        function closeToolModal() {
+            document.getElementById('tool-modal').classList.add('hidden');
+            document.getElementById('tool-modal').classList.remove('flex');
+        }
+
+        function saveTool(e) {
+            e.preventDefault();
+            const id = document.getElementById('tool-id').value;
+            
+            // Sammle vc Werte aus den dynamischen Inputfeldern
+            let vcValues = {};
+            materials.forEach(mat => {
+                const val = parseFloat(document.getElementById(`vc-mat-${mat.id}`).value);
+                vcValues[mat.id] = isNaN(val) ? mat.defaultVc : val;
+            });
+
+            const toolData = {
+                id: id ? parseInt(id) : Date.now(),
+                name: document.getElementById('tool-name').value,
+                type: document.getElementById('tool-type').value,
+                diameter: parseFloat(document.getElementById('tool-d').value),
+                z: parseInt(document.getElementById('tool-z').value),
+                fz: parseFloat(document.getElementById('tool-fz').value),
+                vcValues: vcValues
+            };
+
+            if (id) {
+                const index = tools.findIndex(t => t.id == id);
+                tools[index] = toolData;
+            } else {
+                tools.push(toolData);
+            }
+
+            saveData();
+            closeToolModal();
+            renderAdminTools();
+        }
+
+        function deleteTool(id) {
+            if (confirm("Werkzeug wirklich löschen?")) {
+                tools = tools.filter(t => t.id !== id);
+                saveData();
+                renderAdminTools();
+            }
+        }
+
+        // --- ADMIN MATERIALIEN ---
+        function renderAdminMaterials() {
+            const tbody = document.getElementById('admin-materials-table');
+            tbody.innerHTML = materials.length === 0 ? '<tr><td colspan="3" class="p-4 text-center text-slate-400">Keine Materialien vorhanden.</td></tr>' : '';
+
+            materials.forEach(mat => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-900/40 transition">
+                        <td class="p-4 font-semibold text-white">${mat.name}</td>
+                        <td class="p-4 text-slate-300">${mat.defaultVc} m/min</td>
+                        <td class="p-4 text-right space-x-2">
+                            <button onclick="openMaterialModal(${mat.id})" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition text-xs font-medium"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteMaterial(${mat.id})" class="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg transition text-xs font-medium"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openMaterialModal(id = null) {
+            document.getElementById('material-modal').classList.remove('hidden');
+            document.getElementById('material-modal').classList.add('flex');
+            
+            let mat = id ? materials.find(m => m.id === id) : null;
+            document.getElementById('material-modal-title').innerText = id ? 'Material bearbeiten' : 'Neues Material anlegen';
+            document.getElementById('material-id').value = mat ? mat.id : '';
+            document.getElementById('material-name').value = mat ? mat.name : '';
+            document.getElementById('material-vc').value = mat ? mat.defaultVc : '';
+        }
+
+        function closeMaterialModal() {
+            document.getElementById('material-modal').classList.add('hidden');
+            document.getElementById('material-modal').classList.remove('flex');
+        }
+
+        function saveMaterial(e) {
+            e.preventDefault();
+            const id = document.getElementById('material-id').value;
+            const matData = {
+                id: id ? parseInt(id) : Date.now(),
+                name: document.getElementById('material-name').value,
+                defaultVc: parseFloat(document.getElementById('material-vc').value)
+            };
+
+            if (id) {
+                const index = materials.findIndex(m => m.id == id);
+                materials[index] = matData;
+            } else {
+                materials.push(matData);
+            }
+
+            saveData();
+            closeMaterialModal();
+            renderAdminMaterials();
+        }
+
+        function deleteMaterial(id) {
+            if (confirm("Material wirklich löschen?")) {
+                materials = materials.filter(m => m.id !== id);
+                saveData();
+                renderAdminMaterials();
+            }
+        }
+
+        // Initialisierung beim Start
+        window.onload = function() {
+            initWizardStep1();
+        };
+    </script>
 </body>
 </html>
